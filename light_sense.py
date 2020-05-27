@@ -17,8 +17,10 @@ def save_data():
     complete_data.to_csv(filename)
 
 def load_data():
-    complete_data = pd.read_csv(filename)
-
+    try:
+        complete_data = pd.read_csv(filename)
+    except FileNotFoundError:
+        print("File does not exist, please use run() and save_data() before loading")
 def clear_data():
     complete_data = pd.DataFrame()
 
@@ -26,7 +28,10 @@ def save_learned_data():
     learned_schedule.to_csv(learned_data)
 
 def load_learned_data():
-    learned_schedule = pd.read_csv(learned_data)
+    try:
+        learned_schedule = pd.read_csv(learned_data)
+    except FileNotFoundError:
+        "File does not exist \n Learned schedule has not been created"
 
 def clear_learned():
     warning = input("This will clear all learned schedules from memory, do you wish to continue? \n [Y/n]")
@@ -75,7 +80,10 @@ class TimeSheet:
 def compile_data(day_data):
     """
     Compiles all the data from multiple days into one dataframe
+    Inputs
     day_data: list of TimeSheet objects
+    Returns
+    complete_df: completed outer joined df fo all the day_data
     """
     # def get_max_index(day_data):
     #     lengths = [day.timesheet.size for day in day_data]
@@ -115,7 +123,11 @@ def calculate_schedule(complete_data):
         results.append(result)
     schedule = pd.DataFrame(results, index=complete_data.index, columns=['learned schedule'])
     return schedule
- 
+
+def run(day_data):
+    complete_data = compile_data(day_data)
+    schedule = calculate_schedule(complete_data)
+    return schedule, complete_data
 
 #Fill out daily timesheet indicating when the light was on and off
 
@@ -126,17 +138,21 @@ def calculate_schedule(complete_data):
 #Write code for the microcontroller to first detect the light and then also control the light based on the schedule that we create for it.
 
 if __name__ == "__main__":
-    
-
+    clear_learned()
+    load_learned_data()
     day1 = TimeSheet(div_size=39)
     day2 = TimeSheet()
     day3 = TimeSheet(date=datetime.now() + timedelta(days=random.randint(0,20)), data='random', div_size=20)
     day4 = TimeSheet(date=datetime.now() + timedelta(days=20), data='ones', div_size=25)
-    complete_data = compile_data([day1, day2, day3, day4])
+    if learned_schedule.empty:
+        learned_schedule, complete_data = run([day1, day2, day3, day4])
+        print(learned_schedule)
+    else:
+        learned_schedule, complete_data = run([learned_schedule, day4])
+        print(learned_schedule)
+    save_learned_data()    
     save_data()
     clear_data()
     load_data()
-    print(complete_data)
-    print(calculate_schedule(complete_data))
     complete_data = compile_data([day1, day2, day3, day4])
     print(complete_data)
