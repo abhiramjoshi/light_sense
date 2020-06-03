@@ -46,15 +46,15 @@ class TimeSheet:
         Inputs
         ------
         div_size: The size of the time divisions of a particular day in minutes. A div_size that doesnt break down the day into whole number minute divisions is rounded to the nearest div_size that accomplishes this
-        data: The on/off light data that will be given by the microcontroller
+        data: The on/off light data that will be given by the microcontroller, 'random' for randome data, 'ones' for ones, deafult is zeros
         date: the date of the data
         """
 
         self.date = date
         self.div_size = u.get_whole_div(div_size, FACTORS)
-        if data == 'random':
+        if data is 'random':
             data = u.random_data(self.div_size)
-        if data == 'ones':
+        if data is 'ones':
             data = np.full(1440//self.div_size, 1)
         self.timesheet = u.construct_dataframe(data, self.div_size, self.date.strftime('%Y-%m-%d'))
 
@@ -96,7 +96,53 @@ def compile_data(day_data):
         complete_df = pd.concat([complete_df,day.timesheet], axis = 1, sort = True)
     return complete_df
 
+def calculate_duaration(schedule):
+    """
+    Calculates the duration the light has been on for. This is an extra feature that is intended to be used for machine learning purposes
+
+    Input
+    ------
+    schedule: The daily timesheet 
+
+    Returns
+    -------
+    Timesheet with duration column added and last duration column value
+    """
+    schedule_copy = schedule.copy()
+    schedule_length = (len(schedule_copy["learned schedule"].index)-1)
+    if "duration" in schedule_copy.columns:
+        pass
+    else:
+        schedule_copy["duration"] = ""
+        for i, time in enumerate(schedule_copy["learned schedule"].index):
+            if schedule_copy['learned schedule'][i] == 1:
+                if i == 0:
+                    try:
+                        schedule_copy['duration'][i] = schedule_copy['last duration'][0]
+                    except KeyError:
+                        schedule_copy['duration'][i] = 0
+                else:
+                    schedule_copy['duration'][i] = schedule_copy['learned schedule'][i] + schedule_copy['duration'][(i-1)]
+            else:
+                schedule_copy['duration'][i] = 0    
+            if i == schedule_length:
+                schedule_copy['last duration'] = ''
+                schedule_copy['last duration'][0] = schedule_copy['duration'][i]
+    return schedule_copy
+
+
 def calculate_timesegement(time_data):
+    """
+    Calculates the value of the state of the light at each time given previous data points.
+
+    Input
+    -----
+    Time_data: Row of datapoints indication if the light has been on or off on previous days for one particular time segement
+
+    Returns
+    -------
+    Predicted state of the light for future day.
+    """
     prev_sum = 0
     for t in time_data:
         if pd.isnull(t):
@@ -109,13 +155,32 @@ def calculate_timesegement(time_data):
         return 0
 
 def calculate_schedule(complete_data):
+    """
+    Calculates a complete schedule using predicted values for when the lamp should be on
+
+    Input
+    -----
+    complete_data: copleted timesheets
+
+    Returns
+    -------
+    Shedule of predicted light state values
+    """
     results = []
     for row in complete_data.index:
         result = calculate_timesegement(complete_data.loc[row, :])
         results.append(result)
     schedule = pd.DataFrame(results, index=complete_data.index, columns=['learned schedule'])
     return schedule
- 
+
+def run(day_data):
+    """
+    Completes the data, calulates schedule, adds feature to schedule
+    """
+    complete_data = compile_data(day_data)
+    schedule = calculate_schedule(complete_data)
+    schedule = calculate_duaration(schedule)
+    return schedule, complete_data
 
 #Fill out daily timesheet indicating when the light was on and off
 
