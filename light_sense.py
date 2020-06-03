@@ -104,6 +104,30 @@ def compile_data(day_data):
         complete_df = pd.concat([complete_df,day.timesheet], axis = 1, sort = True)
     return complete_df
 
+def calculate_duaration(schedule):
+    schedule_copy = schedule.copy()
+    schedule_length = (len(schedule_copy["learned schedule"].index)-1)
+    if "duration" in schedule_copy.columns:
+        pass
+    else:
+        schedule_copy["duration"] = ""
+        for i, time in enumerate(schedule_copy["learned schedule"].index):
+            if schedule_copy['learned schedule'][i] == 1:
+                if i == 0:
+                    try:
+                        schedule_copy['duration'][i] = schedule_copy['last duration'][0]
+                    except KeyError:
+                        schedule_copy['duration'][i] = 0
+                else:
+                    schedule_copy['duration'][i] = schedule_copy['learned schedule'][i] + schedule_copy['duration'][(i-1)]
+            else:
+                schedule_copy['duration'][i] = 0    
+            if i == schedule_length:
+                schedule_copy['last duration'] = ''
+                schedule_copy['last duration'][0] = schedule_copy['duration'][i]
+    return schedule_copy
+
+
 def calculate_timesegement(time_data):
     prev_sum = 0
     for t in time_data:
@@ -127,6 +151,7 @@ def calculate_schedule(complete_data):
 def run(day_data):
     complete_data = compile_data(day_data)
     schedule = calculate_schedule(complete_data)
+    schedule = calculate_duaration(schedule)
     return schedule, complete_data
 
 #Fill out daily timesheet indicating when the light was on and off
@@ -134,6 +159,8 @@ def run(day_data):
 #Learn when the light needs to be on and off for the next day
 
 #Create a schedule for the next day that can be sent to a microcontroller 
+
+#Add features such as for how long the light has been on. How long the light has been on in the day.
 
 #Write code for the microcontroller to first detect the light and then also control the light based on the schedule that we create for it.
 
