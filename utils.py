@@ -1,6 +1,9 @@
 import numpy as np
 import pandas as pd
 
+class IndexSpanError(Exception):
+    pass
+
 def factors(n):
     """
     Returns all factors of n in list
@@ -16,7 +19,19 @@ def get_whole_div(div_size, FACTORS):
     closest = FACTORS[distances.index(min(distances))]
     return closest
 
-def create_time_index(div_size):
+# def time_to_string(time, start_minutes = 0, start_hours = 0):
+#     minutes = (time + start_minutes) % 60    
+#     hours = (time // 60 + start_hours) // 24 + (time // 60 + start_hours) % 24
+#     return f"{hours:02}:{minutes:02}"
+
+def time_to_string(time, start_time = 0):
+    time = time + start_time
+    minutes = (time) % 60    
+    hours = (time // 60)
+    return f"{hours:02}:{minutes:02}"
+
+
+def create_time_index(div_size, total_time, start_time = None):
     """
     Formats time into HH:MM format and returns index for a dataframe
     
@@ -28,15 +43,23 @@ def create_time_index(div_size):
     -------
     Index of times in HH:MM format
     """
-
+    if start_time is None:
+        start_time = 0
+    if (start_time + total_time) > 1440:
+        print("Index cannot span multiple days")
+        raise IndexSpanError
+    start_minutes = start_time % 60
+    start_hours = start_time // 60
     time_index = []
-    for t in range(1440//div_size):
-        minutes = (t*div_size) % 60     
-        hours = (t*div_size) // 60
-        time_index.append(f"{hours:02}:{minutes:02}")
+    for t in range(total_time//div_size):
+        # minutes = (t*div_size) % 60 + start_minutes    
+        # hours = (t*div_size) // 60 + start_hours
+        # time_index.append(f"{hours:02}:{minutes:02}")
+        string_time = time_to_string((t*div_size),start_time= start_time)
+        time_index.append(string_time)
     return time_index
 
-def construct_dataframe(data, div_size, date):
+def construct_dataframe(data, div_size, date, total_time, start_time = 0):
     """
     Create dataframe given data
     
@@ -49,9 +72,10 @@ def construct_dataframe(data, div_size, date):
     Returns
     -------
     Pandas dataframe of the data
-    time_index = create_time_index(div_size)
+    """
+    time_index = create_time_index(div_size, total_time, start_time= start_time)
     if type(data) == type(None):
-        data = np.full(1440//div_size, 0)
+        data = np.full(total_time//div_size, 0)
     return pd.DataFrame(data, index=time_index, columns = pd.to_datetime([date]))
     schedule = {}
     for e,i in enumerate(data):

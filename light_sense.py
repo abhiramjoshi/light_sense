@@ -11,13 +11,20 @@ complete_data = pd.DataFrame()
 GAMMA = 0.5
 threshold = 1
 learned_schedule = pd.DataFrame()
+TOTAL_TIME = 1440
+DIV_SIZE = 10
 
 #Load and save data to and from csv
 def save_data():
     complete_data.to_csv(filename)
 
 def load_data():
-    complete_data = pd.read_csv(filename)
+    try:
+        complete_data = pd.read_csv(filename)
+    except FileNotFoundError:
+        save_data()
+    finally:
+        complete_data = pd.read_csv(filename)
 
 def clear_data():
     complete_data = pd.DataFrame()
@@ -41,7 +48,7 @@ Next, the idea of the program will be to return a schedule of light on off times
 """
 
 class TimeSheet:
-    def __init__(self, date = datetime.now(), data = None, div_size = 10):
+    def __init__(self, timesheet = None, date = datetime.now(), data = None, div_size = DIV_SIZE, total_time = TOTAL_TIME, start_time = 0):
         """
         Inputs
         ------
@@ -52,11 +59,17 @@ class TimeSheet:
 
         self.date = date
         self.div_size = u.get_whole_div(div_size, FACTORS)
-        if data is 'random':
-            data = u.random_data(self.div_size)
-        if data is 'ones':
-            data = np.full(1440//self.div_size, 1)
-        self.timesheet = u.construct_dataframe(data, self.div_size, self.date.strftime('%Y-%m-%d'))
+        self.start_time = start_time
+        self.total_time = total_time
+        self.end_time = self.start_time + self.total_time 
+        if timesheet is None:
+            if data is 'random':
+                data = u.random_data(self.div_size)
+            if data is 'ones':
+                data = np.full(total_time//self.div_size, 1)
+            self.timesheet = u.construct_dataframe(data, self.div_size, self.date.strftime('%Y-%m-%d'), self.total_time, self.start_time)
+        else:
+            self.timesheet = timesheet
 
     def __str__(self):
         return self.timesheet.to_string()
@@ -83,7 +96,6 @@ def compile_data(day_data):
     #     max_data_index = day_data[max_day].timesheet.index
     #     return max_data_index 
     # max_index = get_max_index(day_data)
-
     complete_index = pd.DataFrame(index = day_data[0].timesheet.index)
     for day in day_data:
         day_index = pd.DataFrame(0, columns = ['remove'], index = day.timesheet.index)
@@ -192,16 +204,19 @@ def run(day_data):
 
 if __name__ == "__main__":
     
-
-    day1 = TimeSheet(div_size=39)
-    day2 = TimeSheet()
-    day3 = TimeSheet(date=datetime.now() + timedelta(days=random.randint(0,20)), data='random', div_size=20)
-    day4 = TimeSheet(date=datetime.now() + timedelta(days=20), data='ones', div_size=25)
-    complete_data = compile_data([day1, day2, day3, day4])
-    save_data()
-    clear_data()
-    load_data()
+    test = TimeSheet(div_size=10)
+    test2 = TimeSheet(data='ones', div_size=10, total_time=60)
+    complete_data = compile_data([test, test2])
     print(complete_data)
-    print(calculate_schedule(complete_data))
-    complete_data = compile_data([day1, day2, day3, day4])
-    print(complete_data)
+    # day1 = TimeSheet(div_size=39)
+    # day2 = TimeSheet()
+    # day3 = TimeSheet(date=datetime.now() + timedelta(days=random.randint(0,20)), data='random', div_size=20)
+    # day4 = TimeSheet(date=datetime.now() + timedelta(days=20), data='ones', div_size=25)
+    # complete_data = compile_data([day1, day2, day3, day4])
+    # save_data()
+    # clear_data()
+    # load_data()
+    # print(complete_data)
+    # print(calculate_schedule(complete_data))
+    # complete_data = compile_data([day1, day2, day3, day4])
+    # print(complete_data)
