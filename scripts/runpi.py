@@ -5,7 +5,7 @@ import light_sense, utils
 import numpy as np
 import pandas as pd
 
-#light_sensor = DigitalInputDevice(14)
+light_sensor = DigitalInputDevice(14)
 TOTAL_TIME = 1440
 TIME_DIV = 10
 START = 0
