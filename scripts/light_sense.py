@@ -8,7 +8,7 @@ FACTORS = list(u.factors(1440))
 filename = './complete_data.csv'
 learned_data = './learned_data.csv'
 complete_data = pd.DataFrame()
-GAMMA = 0.5
+GAMMA = 0.75
 threshold = 1
 learned_schedule = pd.DataFrame()
 TOTAL_TIME = 1440
@@ -19,21 +19,24 @@ def save_data():
     complete_data.to_csv(filename)
 
 def load_data():
+    global complete_data
     try:
-        complete_data = pd.read_csv(filename)
+        complete_data = pd.read_csv(filename, index_col=0)
     except FileNotFoundError:
         save_data()
-    finally:
-        complete_data = pd.read_csv(filename)
+        complete_data = pd.read_csv(filename, index_col=0)
 
 def clear_data():
+    global complete_data
     complete_data = pd.DataFrame()
 
 def save_learned_data():
+    global learned_schedule
     learned_schedule.to_csv(learned_data)
 
 def load_learned_data():
-    learned_schedule = pd.read_csv(learned_data)
+    global learned_schedule
+    learned_schedule = pd.read_csv(learned_data, index_col=0)
 
 def clear_learned():
     warning = input("This will clear all learned schedules from memory, do you wish to continue? \n [Y/n]")
@@ -48,7 +51,7 @@ Next, the idea of the program will be to return a schedule of light on off times
 """
 
 class TimeSheet:
-    def __init__(self, timesheet = None, date = datetime.now(), data = None, div_size = DIV_SIZE, total_time = TOTAL_TIME, start_time = 0):
+    def __init__(self, timesheet = None, date = date.today(), data = None, div_size = DIV_SIZE, total_time = TOTAL_TIME, start_time = 0):
         """
         Inputs
         ------
@@ -61,7 +64,7 @@ class TimeSheet:
         self.div_size = u.get_whole_div(div_size, FACTORS)
         self.start_time = start_time
         self.total_time = total_time
-        self.end_time = self.start_time + self.total_time 
+        self.end_time = self.start_time + self.total_time - 1 
         if isinstance(timesheet, pd.DataFrame):
             self.timesheet = timesheet
         else:
@@ -77,6 +80,8 @@ class TimeSheet:
     def fill(self, num_div, new_index):
         new_index_df = pd.DataFrame(index=new_index)
         self.timesheet = pd.concat([new_index_df,self.timesheet], axis = 1)
+        if self.timesheet.empty:
+            self.timesheet["empty"] = 0
         for i,row in enumerate(new_index):
             if i is not 0:
                 if pd.isnull(self.timesheet.loc[row][0]):
@@ -106,6 +111,11 @@ def compile_data(day_data):
     for day in day_data:
         day.fill(complete_df.index.size, complete_df.index)
         complete_df = pd.concat([complete_df,day.timesheet], axis = 1, sort = True)
+    try:
+        complete_df.drop(columns=['empty'], inplace=True)
+    except KeyError:
+        pass
+    complete_df.columns = pd.to_datetime(complete_df.columns, errors='ignore')
     return complete_df
 
 def calculate_duaration(schedule):
@@ -114,7 +124,7 @@ def calculate_duaration(schedule):
 
     Input
     ------
-    schedule: The daily timesheet 
+    schedule: The daily timesheet dataframe 
 
     Returns
     -------
@@ -203,11 +213,11 @@ def run(day_data):
 #Write code for the microcontroller to first detect the light and then also control the light based on the schedule that we create for it.
 
 if __name__ == "__main__":
-    
-    test = TimeSheet(div_size=10)
-    test2 = TimeSheet(data='ones', div_size=10, total_time=60)
-    complete_data = compile_data([test, test2])
-    print(complete_data)
+    # clear_data()
+    # test = TimeSheet(timesheet=complete_data)
+    # test2 = TimeSheet(data='ones', div_size=10, total_time=60)
+    # complete_data = compile_data([test, test2])
+    # print(complete_data)
     # day1 = TimeSheet(div_size=39)
     # day2 = TimeSheet()
     # day3 = TimeSheet(date=datetime.now() + timedelta(days=random.randint(0,20)), data='random', div_size=20)
@@ -220,3 +230,24 @@ if __name__ == "__main__":
     # print(calculate_schedule(complete_data))
     # complete_data = compile_data([day1, day2, day3, day4])
     # print(complete_data)
+    # jun_14 = pd.read_csv('/home/aj/Documents/light_sense/data/complete_data.csv', index_col=0)
+    # # jun_14 = u.add_duration(jun_14)
+    # # jun_14 = u.add_day_of_week(jun_14)
+    # # jun_14 = u.string_to_time_datasheet(jun_14)
+    # # cc = u.data_structuring([jun_14, jun_14])
+    # jun_14 = TimeSheet(timesheet=jun_14)
+    # jun_14 = compile_data([jun_14, jun_14])
+    # print(jun_14)
+    # #print(cc)
+    clear_data()
+    load_data()
+    data_1 = pd.read_csv('/home/aj/Documents/light_sense/data/2020-06-25_data.csv', index_col=0)
+    data_2 = pd.read_csv('/home/aj/Documents/light_sense/data/2020-06-26_data.csv', index_col=0)
+    data_3 = pd.read_csv('/home/aj/Documents/light_sense/data/2020-06-27_data.csv', index_col=0)
+    data_1 = TimeSheet(timesheet=data_1)
+    data_2 = TimeSheet(timesheet=data_2)
+    data_3 = TimeSheet(timesheet=data_3)
+    complete_data = compile_data([data_1, data_2, data_3])
+    print(complete_data)
+    shedule = calculate_schedule(complete_data)
+    print(shedule)

@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from datetime import datetime
 
 class IndexSpanError(Exception):
     pass
@@ -95,3 +96,65 @@ def random_data(div_size):
     """
     data = np.random.randint(0,2,(1440//div_size))
     return data
+
+def add_duration(timesheet):
+    """
+    Calculates the duration the light has been on for. This is an extra feature that is intended to be used for machine learning purposes
+
+    Input
+    ------
+    schedule: The daily timesheet dataframe 
+
+    Returns
+    -------
+    Timesheet with duration column added and last duration column value
+    """
+    timesheet_copy = timesheet.copy()
+    schedule_length = (len(timesheet_copy.index)-1)
+    if "duration" in timesheet.columns:
+        pass
+    else:
+        timesheet_copy["duration"] = ""
+        for i, time in enumerate(timesheet_copy.index):
+            if timesheet_copy.iloc[i][1] == 1:
+                if i == 0:#first row
+                    try:
+                        timesheet_copy['duration'][i] = timesheet_copy['last duration'][0]
+                    except KeyError:
+                        timesheet_copy['duration'][i] = 0
+                else:
+                    timesheet_copy['duration'][i] = timesheet_copy.iloc[i][1] + timesheet_copy['duration'][(i-1)]
+            else:
+                timesheet_copy['duration'][i] = 0    
+            if i == schedule_length:
+                timesheet_copy['last duration'] = ''
+                timesheet_copy['last duration'][0] = timesheet_copy['duration'][i]
+    return timesheet_copy
+
+def add_day_of_week(timesheet):
+    date = timesheet.columns[1]
+    year, month, day = (int(x) for x in date.split('-'))
+    day = datetime(year, month, day).weekday()  
+    timesheet["DayOfWeek"] = day
+    return timesheet
+
+def string_to_time_datasheet(timesheet):
+    timesheet_copy = timesheet.copy()
+    timesheet_copy['Time (minutes)'] = 0
+    for i, time in enumerate(timesheet.index):
+        timesheet_copy['Time (minutes)'][i] = string_to_time(timesheet_copy.iloc[i][0])
+    return timesheet_copy
+
+def string_to_time(string_time):
+    hours, minutes = (int(x) for x in string_time.split(':'))
+    total_time = (hours*60) + minutes
+    return total_time
+
+def data_structuring(timesheets):
+    concatenated = pd.DataFrame()
+    for timesheet in timesheets:
+        columns = timesheet.columns
+        timesheet = timesheet.rename(columns = {columns[1]:'State'})
+        concatenated = pd.concat([concatenated, timesheet], axis=0, ignore_index=True)
+
+    return concatenated    
