@@ -5,6 +5,7 @@ from datetime import datetime
 class IndexSpanError(Exception):
     pass
 
+
 def factors(n):
     """
     Returns all factors of n in list
@@ -32,7 +33,7 @@ def time_to_string(time, start_time = 0):
     return f"{hours:02}:{minutes:02}"
 
 
-def create_time_index(div_size, total_time, start_time = None):
+def create_time_index(div_size, total_time, start_time = 0):
     """
     Formats time into HH:MM format and returns index for a dataframe
     
@@ -44,8 +45,6 @@ def create_time_index(div_size, total_time, start_time = None):
     -------
     Index of times in HH:MM format
     """
-    if start_time is None:
-        start_time = 0
     if (start_time + total_time) > 1440:
         print("Index cannot span multiple days")
         raise IndexSpanError
@@ -97,7 +96,7 @@ def random_data(div_size):
     data = np.random.randint(0,2,(1440//div_size))
     return data
 
-def add_duration(timesheet):
+def add_duration(timesheet, prev_last_duration = None):
     """
     Calculates the duration the light has been on for. This is an extra feature that is intended to be used for machine learning purposes
 
@@ -116,33 +115,71 @@ def add_duration(timesheet):
     else:
         timesheet_copy["duration"] = ""
         for i, time in enumerate(timesheet_copy.index):
-            if timesheet_copy.iloc[i][1] == 1:
+            if timesheet_copy.iloc[i][0] == 1:
                 if i == 0:#first row
-                    try:
-                        timesheet_copy['duration'][i] = timesheet_copy['last duration'][0]
-                    except KeyError:
+                    if prev_last_duration is not None:
+                        timesheet_copy['duration'][i] = prev_last_duration
+                    else:
                         timesheet_copy['duration'][i] = 0
                 else:
-                    timesheet_copy['duration'][i] = timesheet_copy.iloc[i][1] + timesheet_copy['duration'][(i-1)]
+                    timesheet_copy['duration'][i] = timesheet_copy.iloc[i][0] + timesheet_copy['duration'][(i-1)]
             else:
                 timesheet_copy['duration'][i] = 0    
             if i == schedule_length:
-                timesheet_copy['last duration'] = ''
-                timesheet_copy['last duration'][0] = timesheet_copy['duration'][i]
-    return timesheet_copy
+                last_duration = timesheet_copy['duration'][i]
+    return timesheet_copy, last_duration
 
-def add_day_of_week(timesheet):
-    date = timesheet.columns[1]
+def day_of_week_one_hot(timesheet):
+    """
+    One hot encoding the days of the week into the timesheet
+
+    Input
+        timesheet: the timesheet that will have features added
+
+    Returns
+        One-hot encoded timesheet
+    """
+    daysofweek = {
+        'Monday': 0,
+        'Tuesday': 1,
+        'Wednesday': 2,
+        'Thursday': 3,
+        'Friday': 4,
+        'Saturday': 5,
+        'Sunday': 6
+    }
+
+    date = timesheet.columns[0]
+    year, month, day = (int(x) for x in date.split('-'))
+    day = datetime(year, month, day).weekday()
+    for key in daysofweek.keys():
+        if day == daysofweek[key]:
+            timesheet[key] = 1
+        else:
+            timesheet[key] = 0
+    
+    return timesheet
+
+def add_day_of_week_test(timesheet):
+    date = timesheet.columns[0]._date_repr
     year, month, day = (int(x) for x in date.split('-'))
     day = datetime(year, month, day).weekday()  
     timesheet["DayOfWeek"] = day
+    return timesheet
+
+def add_day_of_week(timesheet):
+    date = timesheet.columns[0]
+    year, month, day = (int(x) for x in date.split('-'))
+    day = datetime(year, month, day).strftime("%A") 
+    timesheet["DayOfWeek"] = day
+    timesheet["DayOfWeek"] = timesheet["DayOfWeek"].astype('category')
     return timesheet
 
 def string_to_time_datasheet(timesheet):
     timesheet_copy = timesheet.copy()
     timesheet_copy['Time (minutes)'] = 0
     for i, time in enumerate(timesheet.index):
-        timesheet_copy['Time (minutes)'][i] = string_to_time(timesheet_copy.iloc[i][0])
+        timesheet_copy['Time (minutes)'][i] = string_to_time(time)
     return timesheet_copy
 
 def string_to_time(string_time):
@@ -154,7 +191,7 @@ def data_structuring(timesheets):
     concatenated = pd.DataFrame()
     for timesheet in timesheets:
         columns = timesheet.columns
-        timesheet = timesheet.rename(columns = {columns[1]:'State'})
+        timesheet = timesheet.rename(columns = {columns[0]:'State'})
         concatenated = pd.concat([concatenated, timesheet], axis=0, ignore_index=True)
 
     return concatenated    

@@ -55,16 +55,16 @@ class TimeSheet:
         """
         Inputs
         ------
-        div_size: The size of the time divisions of a particular day in minutes. A div_size that doesnt break down the day into whole number minute divisions is rounded to the nearest div_size that accomplishes this
-        data: The on/off light data that will be given by the microcontroller, 'random' for randome data, 'ones' for ones, deafult is zeros
-        date: the date of the data
+            div_size: The size of the time divisions of a particular day in minutes. A div_size that doesnt break down the day into whole number minute divisions is rounded to the nearest div_size that accomplishes this
+            data: The on/off light data that will be given by the microcontroller, 'random' for randome data, 'ones' for ones, deafult is zeros
+            date: the date of the data
         """
 
         self.date = date
         self.div_size = u.get_whole_div(div_size, FACTORS)
         self.start_time = start_time
         self.total_time = total_time
-        self.end_time = self.start_time + self.total_time - 1 
+        self.end_time = self.start_time + self.total_time - 5 
         if isinstance(timesheet, pd.DataFrame):
             self.timesheet = timesheet
         else:
@@ -93,7 +93,9 @@ class TimeSheet:
 def compile_data(day_data):
     """
     Compiles all the data from multiple days into one dataframe
-    day_data: list of TimeSheet objects
+    
+    Input
+        day_data: list of TimeSheet objects
     """
     # def get_max_index(day_data):
     #     lengths = [day.timesheet.size for day in day_data]
@@ -244,10 +246,18 @@ if __name__ == "__main__":
     data_1 = pd.read_csv('/home/aj/Documents/light_sense/data/2020-06-25_data.csv', index_col=0)
     data_2 = pd.read_csv('/home/aj/Documents/light_sense/data/2020-06-26_data.csv', index_col=0)
     data_3 = pd.read_csv('/home/aj/Documents/light_sense/data/2020-06-27_data.csv', index_col=0)
+    data_4 = pd.read_csv('/home/aj/Documents/light_sense/data/2020-06-28_data.csv', index_col=0)
+    data_5 = pd.read_csv('/home/aj/Documents/light_sense/data/2020-06-29_data.csv', index_col=0)
+    data_6 = pd.read_csv('/home/aj/Documents/light_sense/data/2020-06-30_data.csv', index_col=0)
+    data_7 = pd.read_csv('/home/aj/Documents/light_sense/data/2020-07-01_data.csv', index_col=0)
     data_1 = TimeSheet(timesheet=data_1)
     data_2 = TimeSheet(timesheet=data_2)
     data_3 = TimeSheet(timesheet=data_3)
-    complete_data = compile_data([data_1, data_2, data_3])
+    data_4 = TimeSheet(timesheet=data_4)
+    data_5 = TimeSheet(timesheet=data_5)
+    data_6 = TimeSheet(timesheet=data_6)
+    data_7 = TimeSheet(timesheet=data_7)
+    complete_data = compile_data([data_1, data_2, data_3, data_4, data_5, data_6, data_7])
     print(complete_data)
     shedule = calculate_schedule(complete_data)
     print(shedule)
