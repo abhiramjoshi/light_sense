@@ -4,11 +4,12 @@ import schedule
 import light_sense, utils
 import numpy as np
 import pandas as pd
-import model as md
+#import model as md
 from datetime import date, datetime, timedelta
 
-#light_sensor = DigitalInputDevice(14)
+light_sensor = DigitalInputDevice(14)
 control_pin = DigitalOutputDevice(15)
+control_pin.off()
 TOTAL_TIME = light_sense.TOTAL_TIME
 TIME_DIV = light_sense.DIV_SIZE
 START = 0
@@ -16,7 +17,7 @@ timezone = 0
 START_TIME = START + timezone
 END_TIME = START + TIME_DIV + 1
 collected_data = light_sense.TimeSheet(div_size=TIME_DIV, total_time=TOTAL_TIME, start_time= START_TIME)
-LEARNED_SCHEDULE = None #Dataframe
+LEARNED_SCHEDULE = light_sense.TimeSheet(data='ones').timesheet #Dataframe
 
 
 class EndSchedule(Exception):
@@ -51,6 +52,9 @@ def create_schedule():
     global LEARNED_SCHEDULE
     LEARNED_SCHEDULE = md.predict_schedule((datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d'))
 
+def modelling(data):
+    _, model = md.train_model(data)
+
 def data_management():
     global LEARNED_SCHEDULE
     light_sense.clear_data()
@@ -60,17 +64,14 @@ def data_management():
     save_day_data(collected_data.date.strftime('%Y-%m-%d'))
     light_sense.complete_data = light_sense.compile_data([complete_data, collected_data])
     light_sense.save_data()
-    _,_ = modelling(light_sense.complete_data)
-    LEARNED_SCHEDULE = create_schedule(light_sense.complete_data)
+    #_,_ = modelling(light_sense.complete_data)
+    #LEARNED_SCHEDULE = create_schedule(light_sense.complete_data)
 
 def new_day():
     global collected_data
     collected_data = light_sense.TimeSheet(div_size=TIME_DIV, total_time=TOTAL_TIME, start_time= START_TIME, date= date.today())
     print("The date is: ", collected_data.date)
-    print(date.today())
-
-def modelling(data):
-    _, model = md.train_model(data)
+    print(date.today()) 
 
 def run(timesheet):
     # times = utils.create_time_index(TIME_DIV, TOTAL_TIME, start_time= START_TIME)
