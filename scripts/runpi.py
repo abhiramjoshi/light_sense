@@ -17,8 +17,17 @@ timezone = 0
 START_TIME = START + timezone
 END_TIME = START + TIME_DIV + 1
 collected_data = light_sense.TimeSheet(div_size=TIME_DIV, total_time=TOTAL_TIME, start_time= START_TIME)
-LEARNED_SCHEDULE = light_sense.TimeSheet(data='ones').timesheet #Dataframe
+LEARNED_SCHEDULE = None
 
+def load_learned_schedule():
+    global LEARNED_SCHEDULE
+    try:
+        LEARNED_SCHEDULE = pd.read_csv("./learned_schedule.csv", index_col=0)
+        print('Schedule Loaded')
+    except FileNotFoundError:
+        LEARNED_SCHEDULE = None
+        print("No Schedule")
+load_learned_schedule()
 
 class EndSchedule(Exception):
     pass
@@ -34,7 +43,7 @@ def record(schedule, time):
 
 def control_lamp(time):
     if LEARNED_SCHEDULE is not None:
-        if LEARNED_SCHEDULE[time] == 1:
+        if LEARNED_SCHEDULE.loc[time].any() == 1:
             control_pin.on()
         else:
             control_pin.off()
@@ -70,6 +79,7 @@ def data_management():
 def new_day():
     global collected_data
     collected_data = light_sense.TimeSheet(div_size=TIME_DIV, total_time=TOTAL_TIME, start_time= START_TIME, date= date.today())
+    load_learned_schedule()
     print("The date is: ", collected_data.date)
     print(date.today()) 
 
